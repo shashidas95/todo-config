@@ -7,7 +7,7 @@ pipeline {
     
     environment {
         GIT_REPO = "https://github.com/shashidas95/todo-config"
-        GOOGLE_CHAT_WEBHOOK = "YOUR_GOOGLE_CHAT_WEBHOOK_URL"  // Replace with your actual webhook URL
+       // GOOGLE_CHAT_WEBHOOK = "YOUR_GOOGLE_CHAT_WEBHOOK_URL"  // Replace with your actual webhook URL
     }
 
     stages {
@@ -44,12 +44,12 @@ pipeline {
                     sh 'git add ./k8s/backend-deployment.yaml ./k8s/frontend-deployment.yaml ./docker-compose.yml'
                     sh "git commit -m 'Updated deployment files and docker-compose with IMAGE_TAG: ${imageTag}'"
                     
-                    withCredentials([usernamePassword(credentialsId: 'github', passwordVariable: 'pass', usernameVariable: 'uname')]) {
+                    withCredentials([usernamePassword(credentialsId: 'githubuser', passwordVariable: 'pass', usernameVariable: 'uname')]) {
                         sh 'git push https://$uname:$pass@github.com/shashidas95/todo-config.git main'
                     }
 
                     // Notify Google Chat
-                    notifyGoogleChat(imageTag)
+                    //notifyGoogleChat(imageTag)
                 }
             }
         }
@@ -65,10 +65,10 @@ pipeline {
     }
 }
 
-def notifyGoogleChat(imageTag) {
-    def webhookUrl = env.GOOGLE_CHAT_WEBHOOK
-    def message = [
-        "text": "Image tag updated to ${imageTag}"
-    ]
-    httpRequest httpMode: 'POST', contentType: 'APPLICATION_JSON', requestBody: groovy.json.JsonOutput.toJson(message), url: webhookUrl
-}
+//def notifyGoogleChat(imageTag) {
+   // def webhookUrl = env.GOOGLE_CHAT_WEBHOOK
+   // def message = [
+   //     "text": "Image tag updated to ${imageTag}"
+   // ]
+   // httpRequest httpMode: 'POST', contentType: 'APPLICATION_JSON', requestBody: groovy.json.JsonOutput.toJson(message), url: webhookUrl
+//}
