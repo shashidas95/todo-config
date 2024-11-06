@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: shashidas/todo-fe:20241106-1630
+          image: shashidas/todo-fe:20241106-1646
           ports:
             - containerPort: 3000 # Change to the frontend port
 
