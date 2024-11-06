@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: shashidas/todo-fe:${IMAGE_TAG} # replace IMAGE_TAG in your CI/CD pipeline
+          image: shashidas/todo-fe:20241106-1630
           ports:
             - containerPort: 3000 # Change to the frontend port
 
