@@ -13,7 +13,7 @@ pipeline {
         CONFIG_PROJECT_NAME = "todo-config"
         GOOGLE_CHAT_WEBHOOK = credentials('google_chat_webhook')
         DOCKER_SERVER = '3.110.119.81'
-        SSH_KEY = credentials('docker-shashi-key')
+        SSH_KEY = credentials('docker-shashi-key') // SSH key stored in Jenkins credentials
     }
 
     stages {
@@ -45,29 +45,30 @@ pipeline {
                 script {
                     sshagent(credentials: ['docker_server_credentials']) {
                         sh """
-                    'cp $SSH_KEY ./docker-shashi-key.pem'
-                    'chmod 400 ./docker-shashi-key.pem'
-                    ssh -i ./docker-shashi-key.pem ubuntu@${DOCKER_SERVER} 'docker ps'          
-                        # Navigate to project directory
-                        cd ${CONFIG_PROJECT_NAME}
+                            # SSH into the server and execute the necessary commands
+                            ssh -o StrictHostKeyChecking=no -i \$SSH_KEY ubuntu@${DOCKER_SERVER} << EOF
 
-                        # Pull latest changes
-                        git pull origin main
+                            # Navigate to project directory
+                            cd ${CONFIG_PROJECT_NAME}
 
-                        # Update backend and frontend image tags in Kubernetes files and docker-compose.yaml
-                        sed -i 's#image: ${DOCKERHUB_USERNAME}/${IMAGE_BE}:.*#image: ${DOCKERHUB_USERNAME}/${IMAGE_BE}:${IMAGE_TAG}#' ./k8s/backend-deployment.yaml
-                        sed -i 's#image: ${DOCKERHUB_USERNAME}/${IMAGE_FE}:.*#image: ${DOCKERHUB_USERNAME}/${IMAGE_FE}:${IMAGE_TAG}#' ./k8s/frontend-deployment.yaml
-                        sed -i 's#image: ${DOCKERHUB_USERNAME}/${IMAGE_BE}:.*#image: ${DOCKERHUB_USERNAME}/${IMAGE_BE}:${IMAGE_TAG}#' docker-compose.yaml
-                        sed -i 's#image: ${DOCKERHUB_USERNAME}/${IMAGE_FE}:.*#image: ${DOCKERHUB_USERNAME}/${IMAGE_FE}:${IMAGE_TAG}#' docker-compose.yaml
+                            # Pull latest changes
+                            git pull origin main
 
-                        # Commit and push the changes if any
-                        git add ./k8s/backend-deployment.yaml ./k8s/frontend-deployment.yaml docker-compose.yaml
-                        git commit -m 'Updated deployment files with new image tag ${IMAGE_TAG}' || echo "No changes to commit"
-                        git push origin main
-                        # Restart Docker Compose services with no cache
-                        docker-compose down
-                        docker-compose up -d --no-cache
-                     EOF
+                            # Update backend and frontend image tags in Kubernetes files and docker-compose.yaml
+                            sed -i 's#image: ${DOCKERHUB_USERNAME}/${IMAGE_BE}:.*#image: ${DOCKERHUB_USERNAME}/${IMAGE_BE}:${IMAGE_TAG}#' ./k8s/backend-deployment.yaml
+                            sed -i 's#image: ${DOCKERHUB_USERNAME}/${IMAGE_FE}:.*#image: ${DOCKERHUB_USERNAME}/${IMAGE_FE}:${IMAGE_TAG}#' ./k8s/frontend-deployment.yaml
+                            sed -i 's#image: ${DOCKERHUB_USERNAME}/${IMAGE_BE}:.*#image: ${DOCKERHUB_USERNAME}/${IMAGE_BE}:${IMAGE_TAG}#' docker-compose.yaml
+                            sed -i 's#image: ${DOCKERHUB_USERNAME}/${IMAGE_FE}:.*#image: ${DOCKERHUB_USERNAME}/${IMAGE_FE}:${IMAGE_TAG}#' docker-compose.yaml
+
+                            # Commit and push the changes if any
+                            git add ./k8s/backend-deployment.yaml ./k8s/frontend-deployment.yaml docker-compose.yaml
+                            git commit -m 'Updated deployment files with new image tag ${IMAGE_TAG}' || echo "No changes to commit"
+                            git push origin main
+
+                            # Restart Docker Compose services with no cache
+                            docker-compose down
+                            docker-compose up -d --no-cache
+                            EOF
                         """
                     }
                 }
