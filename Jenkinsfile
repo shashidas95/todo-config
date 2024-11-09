@@ -40,40 +40,42 @@ pipeline {
             }
         }
 
-        stage("SSH TO DOCKER SERVER AND UPDATE IMAGES") {
-            steps {
-                script {
-                    sshagent(credentials: ['docker_server_credentials']) {
-                        sh """
-                            # SSH into the server and execute the necessary commands
-                            ssh -o StrictHostKeyChecking=no -i \$SSH_KEY ubuntu@${DOCKER_SERVER} << EOF
+      stage("SSH TO DOCKER SERVER AND UPDATE IMAGES") {
+    steps {
+        script {
+            echo "Starting SSH connection to the Docker server..."
+            sshagent(credentials: ['docker_server_credentials']) {
+                sh """
+                    # Debugging output to ensure we are in the correct environment
+                    echo "Checking SSH connection..."
+                    ssh -o StrictHostKeyChecking=no ubuntu@${DOCKER_SERVER} 'echo "SSH connection successful"'
 
-                            # Navigate to project directory
-                            cd ${CONFIG_PROJECT_NAME}
+                    # Navigate to project directory and pull latest changes
+                    echo "Navigating to project directory..."
+                    ssh ubuntu@${DOCKER_SERVER} 'cd ${CONFIG_PROJECT_NAME} && git pull origin main'
 
-                            # Pull latest changes
-                            git pull origin main
+                    # Update the image tags in Kubernetes files and docker-compose.yaml
+                    echo "Updating image tags in Kubernetes and docker-compose.yaml..."
+                    ssh ubuntu@${DOCKER_SERVER} """
+                    sed -i 's#image: ${DOCKERHUB_USERNAME}/${IMAGE_BE}:.*#image: ${DOCKERHUB_USERNAME}/${IMAGE_BE}:${IMAGE_TAG}#' ./k8s/backend-deployment.yaml
+                    sed -i 's#image: ${DOCKERHUB_USERNAME}/${IMAGE_FE}:.*#image: ${DOCKERHUB_USERNAME}/${IMAGE_FE}:${IMAGE_TAG}#' ./k8s/frontend-deployment.yaml
+                    sed -i 's#image: ${DOCKERHUB_USERNAME}/${IMAGE_BE}:.*#image: ${DOCKERHUB_USERNAME}/${IMAGE_BE}:${IMAGE_TAG}#' docker-compose.yaml
+                    sed -i 's#image: ${DOCKERHUB_USERNAME}/${IMAGE_FE}:.*#image: ${DOCKERHUB_USERNAME}/${IMAGE_FE}:${IMAGE_TAG}#' docker-compose.yaml
+                    """
 
-                            # Update backend and frontend image tags in Kubernetes files and docker-compose.yaml
-                            sed -i 's#image: ${DOCKERHUB_USERNAME}/${IMAGE_BE}:.*#image: ${DOCKERHUB_USERNAME}/${IMAGE_BE}:${IMAGE_TAG}#' ./k8s/backend-deployment.yaml
-                            sed -i 's#image: ${DOCKERHUB_USERNAME}/${IMAGE_FE}:.*#image: ${DOCKERHUB_USERNAME}/${IMAGE_FE}:${IMAGE_TAG}#' ./k8s/frontend-deployment.yaml
-                            sed -i 's#image: ${DOCKERHUB_USERNAME}/${IMAGE_BE}:.*#image: ${DOCKERHUB_USERNAME}/${IMAGE_BE}:${IMAGE_TAG}#' docker-compose.yaml
-                            sed -i 's#image: ${DOCKERHUB_USERNAME}/${IMAGE_FE}:.*#image: ${DOCKERHUB_USERNAME}/${IMAGE_FE}:${IMAGE_TAG}#' docker-compose.yaml
+                    # Commit and push changes to git
+                    echo "Committing and pushing changes to GitHub..."
+                    ssh ubuntu@${DOCKER_SERVER} 'cd ${CONFIG_PROJECT_NAME} && git add . && git commit -m "Updated image tags with ${IMAGE_TAG}" || echo "No changes to commit" && git push origin main'
 
-                            # Commit and push the changes if any
-                            git add ./k8s/backend-deployment.yaml ./k8s/frontend-deployment.yaml docker-compose.yaml
-                            git commit -m 'Updated deployment files with new image tag ${IMAGE_TAG}' || echo "No changes to commit"
-                            git push origin main
-
-                            # Restart Docker Compose services with no cache
-                            docker-compose down
-                            docker-compose up -d --no-cache
-                            EOF
-                        """
-                    }
-                }
+                    # Restart Docker Compose services
+                    echo "Restarting Docker Compose services..."
+                    ssh ubuntu@${DOCKER_SERVER} 'cd ${CONFIG_PROJECT_NAME} && docker-compose down && docker-compose up -d --no-cache'
+                """
             }
         }
+    }
+}
+
     }
 
     post {
