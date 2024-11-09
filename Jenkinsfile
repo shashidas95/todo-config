@@ -12,7 +12,8 @@ pipeline {
         IMAGE_FE = "todo-fe"
         CONFIG_PROJECT_NAME = "todo-config"
         GOOGLE_CHAT_WEBHOOK = credentials('google_chat_webhook')
-        DOCKER_SERVER = 'your.docker.server.ip' // Replace with your Docker server's IP or hostname
+        DOCKER_SERVER = '3.110.119.81'
+        SSH_KEY = credentials('docker-shashi-key')
     }
 
     stages {
@@ -44,8 +45,9 @@ pipeline {
                 script {
                     sshagent(credentials: ['docker_server_credentials']) {
                         sh """
-                        ssh -o StrictHostKeyChecking=no ${DOCKER_SERVER} 'bash -s' << 'EOF'
-                        
+                    'cp $SSH_KEY ./docker-shashi-key.pem'
+                    'chmod 400 ./docker-shashi-key.pem'
+                    ssh -i ./docker-shashi-key.pem ubuntu@${DOCKER_SERVER} 'docker ps'          
                         # Navigate to project directory
                         cd ${CONFIG_PROJECT_NAME}
 
@@ -62,18 +64,10 @@ pipeline {
                         git add ./k8s/backend-deployment.yaml ./k8s/frontend-deployment.yaml docker-compose.yaml
                         git commit -m 'Updated deployment files with new image tag ${IMAGE_TAG}' || echo "No changes to commit"
                         git push origin main
-
                         # Restart Docker Compose services with no cache
                         docker-compose down
                         docker-compose up -d --no-cache
-
-                        # Verify that image tags were updated
-                        echo "Verifying image tags in docker-compose.yaml and Kubernetes files:"
-                        grep 'image:' docker-compose.yaml
-                        grep 'image:' ./k8s/backend-deployment.yaml
-                        grep 'image:' ./k8s/frontend-deployment.yaml
-
-                        EOF
+                     EOF
                         """
                     }
                 }
