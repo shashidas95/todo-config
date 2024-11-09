@@ -80,19 +80,6 @@ pipeline {
             }
         }
     }
-        //   Update docker-compose.yaml with new IMAGE_TAG
-                     sh "sed -i 's#image: ${backendImageName}:.*#image: ${backendImageName}:${IMAGE_TAG}#' ./docker-compose.yaml"
-                     sh "sed -i 's#image: ${frontendImageName}:.*#image: ${frontendImageName}:${IMAGE_TAG}#' ./docker-compose.yaml"
-
-
-                    // Configure Git for committing the changes
-                    sh 'git config --global user.email "shashidas95@gmail.com"'
-                    sh 'git config --global user.name "shashidas95"'
-                    sh 'git add ./k8s/backend-deployment.yaml ./k8s/frontend-deployment.yaml'
-                    sh 'git add docker-compose.yaml'
-                    sh "git commit -m 'Updated docker-compose file, backend and frontend deployment files to ${IMAGE_TAG}'"
-                }
-
 
     post {
         success {
@@ -102,4 +89,4 @@ pipeline {
             echo 'Pipeline failed'
         }
     }
-
+}
