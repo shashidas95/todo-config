@@ -29,16 +29,16 @@ pipeline {
             }
         }
 
-        stage("SEND GOOGLE CHAT NOTIFICATION") {
-            steps {
-                script {
-                    def message = "{\"text\": \"Starting deployment with new image tag: ${IMAGE_TAG}\"}"
-                    sh """
-                        curl -X POST -H 'Content-Type: application/json' -d '${message}' ${GOOGLE_CHAT_WEBHOOK}
-                    """
-                }
-            }
-        }
+        // stage("SEND GOOGLE CHAT NOTIFICATION") {
+        //     steps {
+        //         script {
+        //             def message = "{\"text\": \"Starting deployment with new image tag: ${IMAGE_TAG}\"}"
+        //             sh """
+        //                 curl -X POST -H 'Content-Type: application/json' -d '${message}' ${GOOGLE_CHAT_WEBHOOK}
+        //             """
+        //         }
+        //     }
+        // }
 
 stage("SSH TO DOCKER SERVER AND UPDATE IMAGES") {
     steps {
